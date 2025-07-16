@@ -1,0 +1,19 @@
+{
+  "name": "backend02",
+  "version": "1.0.0",
+  "description": "nodejs backend leanring",
+  "keywords": [
+    "javascript",
+    "node"
+  ],
+  "license": "ISC",
+  "author": "saad",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon src/index.js"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
