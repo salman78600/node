@@ -21,7 +21,7 @@ const generateAccessAndRefreshToken = async (userId) => {
   }
 };
 
-// register user
+//*************** register user ***************//
 const userRegister = asyncHandler(async (req, res) => {
   const { fullName, email, username, password } = req.body;
 
@@ -80,7 +80,7 @@ const userRegister = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, 'User registered successfully', createdUser));
 });
 
-// login user
+//*************** login user ***************//
 const userLogin = asyncHandler(async (req, res) => {
   const { username, email, password } = req.body;
 
@@ -137,7 +137,7 @@ const userLogin = asyncHandler(async (req, res) => {
       })
     );
 });
-
+//*********** logout user ***************//
 const userLogout = asyncHandler(async (req, res) => {
   // find and update user to remove refresh token
   await User.findByIdAndUpdate(
@@ -160,4 +160,60 @@ const userLogout = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, 'User logged out successfully'));
 });
 
-export { userRegister, userLogin, userLogout };
+//************** Refresh access Token **************//
+
+const refreshAccessToken = asyncHandler(async (req, res) => {
+  // Check for refresh token in cookies, body, or Authorization header
+ try {
+     const inComingRefreshToken =
+       req.cookies.refreshToken ||
+       req.body.refreshToken ||
+       req.header('Authorization')?.replace('Bearer ', '');
+   
+     if (!inComingRefreshToken) {
+       throw new ApiError(401, 'Unauthorized Request');
+     }
+   
+     const decodeRefreshToken = jwt.verify(
+       inComingRefreshToken,
+       process.env.REFRESH_TOKEN_SECRET
+     );
+   
+     if (!decodeRefreshToken) {
+       throw new ApiError(401, 'Unauthorized Request');
+     }
+   
+     const user = await User.findById(decodeRefreshToken._id);
+   
+     if (!user) {
+       throw new ApiError(404, 'Invalid Refresh Token');
+     }
+   
+     if (inComingRefreshToken !== user?.refreshToken) {
+       throw new ApiError(401, 'Refresh token is expired or used.');
+     }
+   
+     const options = {
+       httpOnly: true,
+       secure: true,
+     };
+   
+     // generate new access and refresh tokens
+    const {accessToken,newRefreshToken}  =  await generateAccessAndRefreshToken(user._id);
+   
+     return res.status(200)
+     .cookie('accessToken', accessToken, options)
+     .cookie('refreshToken', refreshToken, options)
+       .json(
+           new ApiResponse(200, 'Access token refreshed successfully', {
+           accessToken,
+           refreshToken: newRefreshToken,
+           })
+       );
+ } catch (error) {
+    throw new ApiError(401, error?.message || 'Invalid Refresh Token');
+    
+ }
+});
+
+export { userRegister, userLogin, userLogout, refreshAccessToken };
